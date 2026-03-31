@@ -1,0 +1,4 @@
+(library
+ (name ai_disclosure)
+ (public_name opam-ai-disclosure.lib)
+ (libraries compiler-libs.common unix))

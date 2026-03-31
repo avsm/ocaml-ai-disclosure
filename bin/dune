@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name opam-ai-disclosure)
+ (libraries ai_disclosure cmdliner opam-state opam-format progress))
