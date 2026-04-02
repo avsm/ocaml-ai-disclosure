@@ -22,8 +22,8 @@ val pp_level : Format.formatter -> level -> unit
 (** {1 Provenance metadata} *)
 
 type provenance = {
-  model : string option;
-  provider : string option;
+  models : string list;
+  providers : string list;
 }
 
 val empty_provenance : provenance

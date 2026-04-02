@@ -11,11 +11,11 @@ type level = [
 ]
 
 type provenance = {
-  model : string option;
-  provider : string option;
+  models : string list;
+  providers : string list;
 }
 
-let empty_provenance = { model = None; provider = None }
+let empty_provenance = { models = []; providers = [] }
 
 type disclosure = {
   level : level;
@@ -66,10 +66,10 @@ let string_of_level = function
 let pp_level ppf l = Format.pp_print_string ppf (string_of_level l)
 
 let pp_provenance ppf prov =
-  let parts = List.filter_map Fun.id [
-    Option.map (fun m -> "model=" ^ m) prov.model;
-    Option.map (fun p -> "provider=" ^ p) prov.provider;
-  ] in
+  let parts =
+    List.map (fun m -> "model=" ^ m) prov.models @
+    List.map (fun p -> "provider=" ^ p) prov.providers
+  in
   if parts <> [] then
     Format.fprintf ppf " (%s)" (String.concat ", " parts)
 
@@ -102,14 +102,21 @@ let pp_package ppf d =
   List.iter (fun m -> Format.fprintf ppf "@,  %a" pp_module m) d.modules;
   Format.fprintf ppf "@]@."
 
-let pp_json_opt ppf key = function
-  | None -> ()
-  | Some v -> Format.fprintf ppf ",@,\"%s\": \"%s\"" key v
+let pp_json_list ppf key = function
+  | [] -> ()
+  | [v] -> Format.fprintf ppf ",@,\"%s\": \"%s\"" key v
+  | vs ->
+    Format.fprintf ppf ",@,\"%s\": [" key;
+    List.iteri (fun i v ->
+      if i > 0 then Format.fprintf ppf ", ";
+      Format.fprintf ppf "\"%s\"" v
+    ) vs;
+    Format.fprintf ppf "]"
 
 let pp_disclosure_json ppf prefix d =
   Format.fprintf ppf ",@,\"%sdisclosure\": \"%s\"" prefix (string_of_level d.level);
-  pp_json_opt ppf (prefix ^ "model") d.provenance.model;
-  pp_json_opt ppf (prefix ^ "provider") d.provenance.provider
+  pp_json_list ppf (prefix ^ "model") d.provenance.models;
+  pp_json_list ppf (prefix ^ "provider") d.provenance.providers
 
 let pp_package_json ppf d =
   Format.fprintf ppf "@[<v 2>{@,";
@@ -161,9 +168,11 @@ let update_disclosure d field value =
   match field, value with
   | "disclosure", Some s -> { d with level = level_of_string s }
   | "model", Some s ->
-    { d with provenance = { d.provenance with model = Some s } }
+    { d with provenance =
+      { d.provenance with models = d.provenance.models @ [s] } }
   | "provider", Some s ->
-    { d with provenance = { d.provenance with provider = Some s } }
+    { d with provenance =
+      { d.provenance with providers = d.provenance.providers @ [s] } }
   | _ -> d
 
 let update_unit (u : unit_disclosure) field value : unit_disclosure =

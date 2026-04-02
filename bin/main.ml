@@ -15,10 +15,12 @@ let read_opam_disclosure (opam : OpamFile.OPAM.t) : disclosure =
   let ext key =
     Option.bind (OpamStd.String.Map.find_opt key exts) string_of_opam_value
   in
+  let to_list = Option.fold ~none:[] ~some:(fun s -> [s]) in
   { level =
       Option.fold ~none:`Unknown ~some:level_of_string (ext "x-ai-disclosure");
     provenance =
-      { model = ext "x-ai-model"; provider = ext "x-ai-provider" } }
+      { models = to_list (ext "x-ai-model");
+        providers = to_list (ext "x-ai-provider") } }
 
 let with_switch_state f =
   OpamSystem.init ();

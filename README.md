@@ -195,13 +195,31 @@ their parent.  Authors need not declare this explicitly.
 
 | Attribute | Purpose | Example value |
 |-----------|---------|---------------|
-| `ai_model` | Model identifier | `"claude-opus-4-6"` |
-| `ai_provider` | Provider name | `"Anthropic"` |
+| `ai_model` | Model identifier(s) | `"claude-opus-4-6"` |
+| `ai_provider` | Provider name(s) | `"Anthropic"` |
 
 The `ai_model` value should be the API model identifier (e.g.
 `claude-opus-4-6`, `gpt-4o`, `gemini-2.5-pro`), not a marketing name.
 This is the string a caller would pass to the provider's API to
 reproduce the output, and is unambiguous across versions.
+
+These attributes may be repeated to record multiple models that contributed to
+a module.  Each repeated attribute adds to the list rather than replacing the
+previous value:
+
+```ocaml
+[@@@ai_model "claude-opus-4-6"]
+[@@@ai_model "gpt-4o"]
+[@@@ai_provider "Anthropic"]
+[@@@ai_provider "OpenAI"]
+```
+
+This supports workflows where different models are used for different
+aspects of a module (e.g. one for code, another for tests), or where
+multiple contributors use different models.
+
+(TODO avsm: should we have an optional comment field where the use of the model
+can be recorded? e.g. 'testing' or 'translation from Rust')
 
 These use the same naming at each layer, adapted to the layer's syntax:
 dune uses `(model ...)` inside the `(ai_disclosure)` stanza, opam uses
@@ -259,18 +277,16 @@ This two-phase workflow ensures that:
 
 ### opam-ai-disclosure
 
-The `opam-ai-disclosure` binary queries disclosure metadata from
-installed opam packages and local build directories.  It reads
-`x-ai-disclosure` fields from `.opam` files and `ai_disclosure`
-attributes from `.cmt`/`.cmti` files produced by the compiler.
-
-**Commands:**
+The `opam-ai-disclosure` binary queries disclosure metadata from installed opam
+packages and local build directories.  It reads the `x-ai-disclosure` fields
+from `.opam` files and `ai_disclosure` attributes from `.cmt`/`.cmti` files
+produced by the compiler.
 
 ```
 opam-ai-disclosure show <package> [--json]
 ```
 
-Display the disclosure tree for a single installed package: its
+This displays the disclosure tree for a single installed package including its
 package-level disclosure, and per-module disclosures extracted from
 `.cmt`/`.cmti` files in the package's lib directory.
 
@@ -278,43 +294,32 @@ package-level disclosure, and per-module disclosures extracted from
 opam-ai-disclosure lint [<package>]
 ```
 
-Lint disclosure consistency across all installed packages (or a single
-package if named), then print a summary of disclosure levels across the
-switch.  The consistency checks are:
+This lint disclosure consistency across all installed packages (or a single
+package if named), and prints a summary of disclosure levels across the
+switch.  The consistency checks are if a:
 
-- **Warning**: a package declares `none` (positive human-only assertion)
-  but one of its modules carries a different disclosure level.  This is
-  a contradiction: the package claims no AI, but a module within it
-  disagrees.
-- **Info**: a package declares a specific level and one or more modules
-  override it with a different level.  This is not an error (overrides
-  are expected), but is reported for visibility.
+- package declares `none` (positive human-only assertion)
+  but one of its modules carries a different disclosure level involving AI.
+- package declares a specific level and one or more modules override it with a
+  different level.  This is not an error (overrides are expected), but is
+  reported for visibility. [TODO avsm: just remove this?]
 
 ```
 opam-ai-disclosure scan [<dir>] [--json]
 ```
 
-Scan a local directory (default: current directory) for `.cmt`/`.cmti`
-files and extract disclosure attributes.  Useful for inspecting a
-`_build/default` tree during development.
+Scan a local directory for `.cmt`/`.cmti` files and extract disclosure
+attributes.  Useful for inspecting a `_build` tree during development.
 
 ### Future integration
 
-- **odoc**: documentation generators may render disclosure metadata
-  alongside module documentation.
-- **merlin / ocaml-lsp**: language servers may surface disclosure
-  attributes in hover information.
+`odoc` documentation generators may render disclosure metadata alongside module
+documentation.  `merlin` and `ocaml-lsp` language servers may surface
+disclosure attributes in hover information.
 
-## Privacy and Security
+## FAQ
 
-- Disclosure is voluntary and advisory.  It carries no integrity
-  protection or cryptographic verification.
-- Model and provider metadata is optional.  Authors are not required to
-  disclose proprietary tooling.
-- Disclosure metadata describes the code, not the developer.  It does
-  not expose personal information.
-
-## Regulatory Context
+## What is the regulatory context here?
 
 [EU AI Act Article 50(2)](https://eur-lex.europa.eu/eli/reg/2024/1689/oj)
 (effective August 2026) requires providers of AI systems generating
@@ -337,20 +342,71 @@ the OCaml ecosystem to adopt machine-readable AI provenance now,
 independently of whether disclosure becomes a legal requirement for
 code within the EU or other zones.
 
-## Relationship to Other Standards
 
-| Standard | Scope | Relationship |
-|----------|-------|-------------|
-| W3C AI Content Disclosure | HTML elements | Vocabulary source; this spec extends it to OCaml |
-| IETF AI-Disclosure header | HTTP responses | Complementary; opam registry could serve headers |
-| IPTC Digital Source Type | Media files | Vocabulary alignment for interoperability |
-| C2PA 2.2 | Cryptographic provenance | Complementary; out of scope for this proposal |
+### Why is absent "unknown" and not "none"?
+
+The absence of an annotation means the disclosure status has not been
+determined, not that no AI was used. This avoids placing a burden on authors
+who do not use AI tools as they are not required to assert anything.  A
+processor that encounters unannotated code should treat it as having no
+information, not as a positive claim of human authorship.  However, tools may
+choose to do mass annotations based on priors; for example all code originating
+before 2022 might be automatically stamped as `none`.
+
+The `none` value exists for authors who wish to positively assert that
+a package or module was written without AI involvement.
+
+### Why not use git blame?
+
+`git blame` tracks who committed each line, not whether AI was
+involved in producing it.
+
+- A human may commit AI-generated code or an AI agent may commit
+  but the code may have been human-reviewed and substantially rewritten
+  before the commit.
+- Rebases, squash merges, and history rewrites destroy blame
+  attribution, whereas attributes in the source survive these operations.
+
+This specification records the *current state* as declared by the author and is
+not a historical audit trail. Environments that require full traceability may
+use both mechanisms with a VCS for audit and attributes for declaration.
+
+### Can a human claim AI-generated code as their own?
+
+After reviewing, understanding, and potentially rewriting AI-generated code, a
+human may downgrade the disclosure to `ai-assisted` or remove it entirely.
+This proposal does not take a position on the legality of such an operation;
+only that once a human has taken responsibility for the code, the markers can
+reflect that.  See [Intended Workflow](#intended-workflow) for the two-phase
+lifecycle.
+
+### Does this take a position on whether AI code is good or bad?
+
+No. The goal is a transparent and machine-readable signal so that consumers of
+the code (whether humans, license checkers, package managers, or CI systems)
+can apply their own policies.  Some may want to prioritise review of
+AI-generated modules where others may want to filter by provider or model
+version.
+
+### Can this help with licensing policy?
+
+Disclosure metadata can support organisational policies about which
+models or providers are acceptable.  For example, a project could
+lint for code generated by models whose training data or licensing
+terms are incompatible with the project's licence.  The specification
+does not define such policies, but provides the metadata they would
+operate on.
+
+## Contacts
+
+This draft was authored by Anil Madhavapeddy <avsm2@cam.ac.uk>, with
+significant contributions and discussions with Michael W. Dales, Patrick
+Ferris, Mark T. Elvers, Jon Ludlam and Sadiq Jaffer.
+
+This proposal text is licensed as CC-BY and any code as ISC.
 
 ## References
 
 1. [W3C AI Content Disclosure Community Group](https://www.w3.org/community/ai-content-disclosure/)
 2. [IETF draft-abaris-aicdh-00](https://www.ietf.org/archive/id/draft-abaris-aicdh-00.html)
-3. [IPTC Digital Source Type](https://cv.iptc.org/newscodes/digitalsourcetype/)
-4. [EU AI Act, Article 50](https://eur-lex.europa.eu/eli/reg/2024/1689/oj)
-5. [OCaml Manual: Attributes](https://v2.ocaml.org/manual/attributes.html)
-6. [opam Manual: Package Definition](https://opam.ocaml.org/doc/Manual.html)
+3. [EU AI Act, Article 50](https://eur-lex.europa.eu/eli/reg/2024/1689/oj)
