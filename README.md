@@ -311,6 +311,15 @@ opam-ai-disclosure scan [<dir>] [--json]
 Scan a local directory for `.cmt`/`.cmti` files and extract disclosure
 attributes.  Useful for inspecting a `_build` tree during development.
 
+### Claude Code skill
+
+The `ocaml-dev:ai-disclosure` skill for
+[Claude Code](https://claude.ai/code) automates the annotation phase
+of the workflow.  It inserts `ai_disclosure`, `ai_model`, and
+`ai_provider` attributes into generated OCaml code and maintains
+`<package>.opam.template` files.  Install it from the
+[ocaml-claude-marketplace](https://github.com/avsm/ocaml-claude-marketplace).
+
 ### Future integration
 
 `odoc` documentation generators may render disclosure metadata alongside module
