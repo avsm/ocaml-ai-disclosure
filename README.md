@@ -227,10 +227,14 @@ dune uses `(model ...)` inside the `(ai_disclosure)` stanza, opam uses
 
 ## Intended Workflow
 
-The disclosure lifecycle has two phases: automated annotation during code
-generation, followed by human review that adjusts or removes annotations.
+There should be no additional work required if the programmer does not
+use AI assistance.
 
-### Phase 1: AI agent annotates
+For those that do, the disclosure lifecycle has two phases: automated
+annotation during code generation, followed by human review that adjusts or
+removes annotations.
+
+### AI agent annotates...
 
 When an AI coding agent (e.g. Claude Code) generates or modifies OCaml
 code, it should automatically insert `ai_disclosure` attributes at the
@@ -243,9 +247,10 @@ has changed.
 
 This phase is mechanical and should require no human effort.  The
 annotations serve as a conservative starting point: every AI-touched
-artifact is marked.
+artifact is marked. There is a [Claude Code Skill](https://github.com/avsm/ocaml-claude-marketplace/blob/main/plugins/ocaml-dev/skills/ai-disclosure/SKILL.md)
+available that automates this.
 
-### Phase 2: Human reviewer adjusts
+### ...the human reviewer adjusts
 
 During code review, the human reviewer reads the AI-generated code and
 exercises editorial judgement.  After reviewing and potentially modifying
@@ -265,7 +270,7 @@ authorship*.  A human who has thoroughly reviewed, understood, and taken
 responsibility for a piece of code may reasonably assert `none`.  The
 annotations exist to direct review attention, not to permanently brand code.
 
-This two-phase workflow ensures that:
+This workflow ensures that:
 1. AI output is conservatively marked at the point of generation.
 2. Human review effort is directed towards marked code.
 3. Once a human has reviewed and taken ownership, the markers reflect
