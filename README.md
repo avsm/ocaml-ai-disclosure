@@ -5,11 +5,11 @@ AI involvement, ranging light AI-assisted editing ('copilots') to fully
 autonomous generation.  There is currently no accepted mechanism for OCaml
 authors to disclose AI involvement at any granularity within their packages.
 
-This document proposes a voluntary disclosure scheme spanning three levels of
-the OCaml ecosystem:
+This document proposes a voluntary disclosure scheme for
+the OCaml ecosystem that work with:
 
-1. dune `(package)` stanza / opam fields: package-level default disclosure
-2. OCaml source: per-module and per-value disclosure via attributes
+1. dune stanza / opam fields for package-level default disclosure
+2. OCaml per-module and per-value disclosure via attributes
 
 The vocabulary and semantics are aligned with (and derived from) the
 [W3C AI Content Disclosure](https://github.com/w3c-cg/ai-content-disclosure/)
